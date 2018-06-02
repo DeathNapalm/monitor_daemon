@@ -2,10 +2,10 @@ import socket
 from time import sleep
 serversocket = socket.socket()
 
-host = ''
-port = 50007
+host = '127.0.0.1'
+port = 21397
 
-serversocket.bind(('', port))
+serversocket.bind((host, port))
 serversocket.listen(1)
 
 
@@ -30,10 +30,4 @@ def send_warning(type_of_message, measure,*args, **kvargs):
         clientsocket, addr = serversocket.accept()
         clientsocket.send(text_of_message.encode('UTF-8'))
         clientsocket.close()
-# while True:
-#     clientsocket,addr = serversocket.accept()
-#     print("got a connection from %s" % str(addr))
-#
-#     msg = 'Thank you for connecting' + "\r\n"
-#     clientsocket.send(msg.encode('ascii'))
-#     clientsocket.close()
+
