@@ -1,55 +1,37 @@
-#from pyspectator.processor import Cpu
 import psutil
-import sys
 from time import sleep, time
 from botsender import send_warning
 
 sleep_time = 1 # секунды
 traffic_monitor_period = 60  # одна минута
 traffic_monitor_threshold = 10**9  # один гигабайт в байтах
-temperature_threshold = 50
+temperature_threshold = 50 #градусов Цельсия
 
 def do_main_program():
     """
     опрашивает сеносоры температуры и измеряет скачанный траффик
     в случае превышения температуры отправляет предупреждение (пороги отправки берутся из характеристик сенсоров)
     в случае превышения траффика загрузки отправляет сообщение о ддос атаке (порог - один гигабайт в минуту)
-    TODO: 'передавать id девайса который перегрелся'
-
     """
-    send_warning(type_of_message='starting', measure=-1)
-    initial_bytes_recv = psutil.net_io_counters().bytes_recv
-    initial_bytes_recv_time = time()
-    #
-    # if not hasattr(psutil, "sensors_temperatures"):
-    #     sys.exit("platform not supported")
-    # if not hasattr(psutil, "net_io_counters"):
-    #     sys.exit("platform not supported")
-    while True:
-        temps = psutil.sensors_temperatures()
-        # if not temps:
-        #     sys.exit("can't rea   d any temperature")
-        for name, entries in temps.items():
-            for entry in entries :
-                # if entry.label.startswith('Package'):
-                # print("    %-20s %s °C (high = %s °C, critical = %s °C)" % (
-                #     entry.label or name, entry.current, entry.high,
-                #     entry.critical))
-                if float(entry.current) >= float(temperature_threshold) and float(entry.current) < float(entry.critical):
-                    device_name = entry.label or name
-                    # overheated_name = {name: device_name}
-                    send_warning('temperature_high', entry.current, name = device_name)
-                if float(entry.current) == float(entry.critical):
-                    send_warning(type_of_message='temperature_critical', measure=entry.current)
-        if time()-initial_bytes_recv_time >= traffic_monitor_period:
-            traffic_delta = psutil.net_io_counters().bytes_recv- initial_bytes_recv
-            if traffic_delta >= traffic_monitor_threshold:
-                send_warning(type_of_message='traffic_overload', measure=traffic_delta)
-                initial_bytes_recv = psutil.net_io_counters().bytes_recv
-            initial_bytes_recv_time = time()
+    send_warning(type_of_message='starting', measure=-1) # сообщение о старте программы
+    initial_bytes_recv = psutil.net_io_counters().bytes_recv # запоминаем изначальное количество скачаных байт
+    initial_bytes_recv_time = time() # начальное время для измерения траффика
+    
+    while True: # основная петля программы
+        temps = psutil.sensors_temperatures() # считываем показатели сенсоров, помещаем их в структуру temps
+        for name, entries in temps.items(): #пробегаем кортеж по именам сенсоров и их показателям
+            for entry in entries : # пробегаем по показателям сенсора
+                if float(entry.current) >= float(temperature_threshold) and float(entry.current) < float(entry.critical): # проверяем , что температура высокая, но не критическая
+                    device_name = entry.label or name # выбираем название устройства для отображения, если в показателях не указано имя, берём его из структуры
+                    send_warning('temperature_high', entry.current, name = device_name) # посылаем сообщение 
+                if float(entry.current) == float(entry.critical): # проверяем, критическая ли температура
+                    send_warning(type_of_message='temperature_critical', measure=entry.current) # посылаем сообщение
+                    
+        if time()-initial_bytes_recv_time >= traffic_monitor_period: # проверяем, прошло ли достаточное количество времени с момента последнего замера траффика
+            traffic_delta = psutil.net_io_counters().bytes_recv- initial_bytes_recv # вычисляем дельту траффика
+            if traffic_delta >= traffic_monitor_threshold: # если дельта больше чем порог
+                send_warning(type_of_message='traffic_overload', measure=traffic_delta) # отсылаем сообщение
+                initial_bytes_recv = psutil.net_io_counters().bytes_recv #изменяем изначально количество скачанных байт
+            initial_bytes_recv_time = time() #изменяем начальное время
 
-        sleep(sleep_time)
-
-
-if __name__ == '__main__':
-    do_main_program()
+        sleep(sleep_time) 
