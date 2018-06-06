@@ -1,7 +1,7 @@
 import psutil
 from time import sleep, time
 from botsender import send_warning
-
+#from socketsender import send_warning
 sleep_time = 1 # секунды
 traffic_monitor_period = 60  # одна минута
 traffic_monitor_threshold = 10**9  # один гигабайт в байтах
